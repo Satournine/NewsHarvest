@@ -7,7 +7,7 @@ import datetime
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-"""from pymongo import MongoClient"""
+from pymongo import MongoClient
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 log_directory = os.path.join(current_directory, "..", "logs")
@@ -17,13 +17,12 @@ log_file_path = os.path.join(log_directory, log_filename)
 
 logging.basicConfig(filename=log_file_path, level = logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-"""client = MongoClient("mongodb://localhost:27017")
+client = MongoClient("mongodb://localhost:27017")
 db = client["orkun_tuna"]
 
 news_collection = db["news"]
 word_frequency_collection = db["word_frequency"]
 stats_collection = db["stats"]
-"""
 
 chrome_driver_path = r"C:\Program Files\Google\Chrome\Application\chromedriver.exe"
 browser = webdriver.Chrome()
@@ -37,11 +36,19 @@ browser.get(base_URL)
 
 start_time = time.time()
 
-"""def insert_news(news_data):
-    news_collection.insert_one(news_data)
+def insert_news(news_data):
+    try:
+        news_collection.insert_one(news_data)
+        logging.info(f"News data inserted successfully: {news_data}")
+    except Exception as e:
+        logging.error(f"Error inserting news data: {e}")
 
 def insert_stats(stats_data):
-    stats_collection.insert_one(stats_data)"""
+    try:
+        stats_collection.insert_one(stats_data)
+        logging.info(f"Stat data inserted succesfully: {stats_data}")
+    except Exception as e:
+        logging.error(f"Error inserting stat data: {e}")
 
 def get_links_from_page(page_number):
     page_url = base_URL if page_number == 1 else f"{base_URL}page/{page_number}/"
@@ -113,12 +120,10 @@ with ThreadPoolExecutor(max_workers = 10) as executor:
         result = future.result()
         if result:
             print(result)
-            """insert_news(result)"""
+            insert_news(result)
             success_count += 1
         else:
             fail_count += 1
-
-
 
 end_time = time.time()
 elapsed_time = end_time - start_time
@@ -133,7 +138,7 @@ stats = {
 }
 logging.info(f"Finished scraping. Total time: {elapsed_time} seconds.")
 logging.info(f"Scraping stats: {stats}")
-"""insert_stats(stats)"""
+insert_stats(stats)
 print(stats)
 
-"""client.close()"""
+client.close()
