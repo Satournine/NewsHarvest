@@ -5,25 +5,27 @@ from selenium.webdriver.chrome.options import Options
 import time
 import datetime
 
-from concurrent.futures import ThreadPoolExecutor
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 chrome_driver_path = r"C:\Program Files\Google\Chrome\Application\chromedriver.exe"
 browser = webdriver.Chrome()
 base_URL = 'https://turkishnetworktimes.com/kategori/gundem/'
-
+max_pages = 50
+count = 0
+success_count = 0
+fail_count = 0
 
 browser.get(base_URL)
 
 start_time = time.time()
 
-request = requests.get(base_URL).content
-soup = BeautifulSoup(request, "html.parser")
-news_list = soup.find_all('div', {'class': 'kategori_yazilist'})
+def get_links_from_page(page_number):
+    page_url = base_URL if page_number == 1 else f"{base_URL}page/{page_number}/"
+    request = requests.get(page_url).content
+    soup = BeautifulSoup(request, "html.parser")
+    news_list = soup.find_all('div', {'class': 'kategori_yazilist'})
+    return [link['href'] for news in news_list for link in news.find_all('a', {'class': 'post-link'})]
 
-count = 0
-success_count = 0
-fail_count = 0
 
 def extract_img_urls(soup, div_class ):
     div = soup.find('div', {'class': div_class})
@@ -100,13 +102,14 @@ def scrape_article(link):
         return None
 
 
-links = [link['href'] for news in news_list for link in news.find_all('a', {'class': 'post-link'})]
-
-count = len(links)
+all_links = []
+for page_number in range(1, 2):
+    all_links.extend(get_links_from_page(page_number))
+count = len(all_links)
 
 with ThreadPoolExecutor(max_workers = 10) as executor:
-    future_to_link = {executor.submit(scrape_article, link): link for link in links}
-    for future in future_to_link:
+    future_to_link = {executor.submit(scrape_article, link): link for link in all_links}
+    for future in as_completed(future_to_link):
         result = future.result()
         if result:
             print(result)
