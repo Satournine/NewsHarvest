@@ -39,7 +39,7 @@ start_time = time.time()
 def insert_news(news_data):
     try:
         news_collection.insert_one(news_data)
-        logging.info(f"News data inserted successfully: {news_data}")
+        logging.info(f"News data inserted successfully: {news_data['url']}")
     except Exception as e:
         logging.error(f"Error inserting news data: {e}")
 
@@ -114,7 +114,7 @@ for page_number in range(1, max_pages + 1):
     all_links.extend(get_links_from_page(page_number))
 count = len(all_links)
 
-with ThreadPoolExecutor(max_workers = 10) as executor:
+with ThreadPoolExecutor(max_workers = 15) as executor:
     future_to_link = {executor.submit(scrape_article, link): link for link in all_links}
     for future in as_completed(future_to_link):
         result = future.result()
