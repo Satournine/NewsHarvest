@@ -47,6 +47,31 @@ def plot_word_frequency(word_frequencies):
     plt.show()
 
 
+def print_grouped_data_by_update_date(news_collection):
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$update_date",
+                "articles": {
+                    "$push": {
+                        "url": "$url",
+                        "header": "$header",
+                    }
+                }
+            }
+        },
+        {"$sort": {"_id": 1}}  # 1 for ascending, -1 for descending
+    ]
+    try:
+        grouped_data = news_collection.aggregate(pipeline)
+        for data in grouped_data:
+            print(f"Update Date: {data['_id']}")
+            for article in data['articles']:
+                print(f"URL: {article['url']}, Header: {article['header']}")
+    except Exception as e:
+        print(f"Error in grouping data: {e}")
+
+
 def main():
     client = MongoClient("mongodb://localhost:27017")
     db = client["orkun_tuna"]
@@ -64,6 +89,8 @@ def main():
 
     insert_db(word_frequency_collection, most_common_words)
     plot_word_frequency(most_common_words)
+
+    print_grouped_data_by_update_date(news_collection)
 
 
 if __name__ == "__main__":
