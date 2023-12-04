@@ -1,3 +1,4 @@
+# Orkun Tuna
 from bs4 import BeautifulSoup
 import requests
 import time
@@ -7,15 +8,15 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pymongo import MongoClient
 
-
+# Constants for base URL, maximum pages to scrape, and max number of workers for threading
 BASE_URL = 'https://turkishnetworktimes.com/kategori/gundem/'
 MAX_PAGES = 50
 MAX_WORKERS = 15
 count = 0
 
 
-def setup_logging():
-    current_directory = os.path.dirname(os.path.abspath(__file__))
+def setup_logging():  # Sets up logging
+    current_directory = os.path.dirname(os.path.abspath(__file__))  # Finding the current directory
     log_directory = os.path.join(current_directory, "..", "logs")
     os.makedirs(log_directory, exist_ok=True)
     log_filename = "logs.log"
@@ -23,7 +24,7 @@ def setup_logging():
     logging.basicConfig(filename=log_file_path, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def setup_mongodb():
+def setup_mongodb():  # Sets up MongoDB connection
     client = MongoClient("mongodb://localhost:27017")
     db = client["orkun_tuna"]
     news_collection = db["news"]
@@ -31,7 +32,7 @@ def setup_mongodb():
     return client, news_collection, stats_collection
 
 
-def insert_news(news_data, news_collection):
+def insert_news(news_data, news_collection):  # Inserts news item to MongoDB Collection
     try:
         news_collection.insert_one(news_data)
         logging.info(f"News data inserted successfully: {news_data['url']}")
@@ -39,7 +40,7 @@ def insert_news(news_data, news_collection):
         logging.error(f"Error inserting news data: {e}")
 
 
-def insert_stats(stats_data, stats_collection):
+def insert_stats(stats_data, stats_collection):  # Inserts statistics into the MongoDB collection
     try:
         stats_collection.insert_one(stats_data)
         logging.info(f"Stat data inserted succesfully: {stats_data}")
@@ -47,7 +48,7 @@ def insert_stats(stats_data, stats_collection):
         logging.error(f"Error inserting stat data: {e}")
 
 
-def get_links_from_page(pagination):
+def get_links_from_page(pagination):  # Fetches links to individual news articles
     page_url = BASE_URL if pagination == 1 else f"{BASE_URL}page/{pagination}/"
     try:
         request = requests.get(page_url).content
@@ -59,7 +60,7 @@ def get_links_from_page(pagination):
         return []
 
 
-def extract_img_urls(soup, div_class):
+def extract_img_urls(soup, div_class):  # Extracts image URLs from the soup object
     div = soup.find('div', {'class': div_class})
     img_urls = []
     if div:
@@ -70,7 +71,7 @@ def extract_img_urls(soup, div_class):
     return img_urls
 
 
-def extract_dates(soup, div_class):
+def extract_dates(soup, div_class):  # Extracts the publish and update dates
     yazibio_div = soup.find('div', class_=div_class)
     tarih_spans = yazibio_div.find_all('span', class_='tarih')
 
@@ -89,7 +90,7 @@ def extract_dates(soup, div_class):
     return publish_date, update_date
 
 
-def scrape_article(link):
+def scrape_article(link):  # Scrapes an article from a given link & returns its details
     try:
         response = requests.get(link).content
         details_soup = BeautifulSoup(response, "html.parser")

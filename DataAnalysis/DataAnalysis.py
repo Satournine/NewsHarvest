@@ -5,13 +5,14 @@ import matplotlib.pyplot as plt
 import nltk
 from nltk.corpus import stopwords
 import seaborn as sns
+import logging
 
 
-def get_news_articles(collection):
+def get_news_articles(collection):  # Retrieves all news articles from a MongoDB collection
     return collection.find({}, {'text': 1, '_id': 0})
 
 
-def get_extra_stopwords(filepath):
+def get_extra_stopwords(filepath):  # Reads a file containing stopwords
     extra_stop = []
     with open(filepath, 'r', encoding='utf-8') as file:
         for line in file:
@@ -19,7 +20,7 @@ def get_extra_stopwords(filepath):
     return extra_stop
 
 
-def filter_words(news_articles, stop_words, extra_stop):
+def filter_words(news_articles, stop_words, extra_stop):  # Filters out stopwords from the news articles
     words = []
     for data in news_articles:
         article_words = re.findall(r'\w+', data['text'].lower())
@@ -29,13 +30,13 @@ def filter_words(news_articles, stop_words, extra_stop):
     return words
 
 
-def insert_db(collection, word_frequencies):
+def insert_db(collection, word_frequencies):  # Inserts word frequency data to MongoDB
     for word, count in word_frequencies:
         word_data = {"word": word, "count": count}
         collection.insert_one(word_data)
 
 
-def plot_word_frequency(word_frequencies):
+def plot_word_frequency(word_frequencies):  # Plots the frequency of words using seaborn
     words, counts = zip(*word_frequencies)
     sns.set(style="whitegrid")
     plt.figure(figsize=(10, 5))
@@ -47,7 +48,7 @@ def plot_word_frequency(word_frequencies):
     plt.show()
 
 
-def print_grouped_data_by_update_date(news_collection):
+def print_grouped_data_by_update_date(news_collection):  # groups docs by their update date
     pipeline = [
         {
             "$group": {
@@ -65,28 +66,31 @@ def print_grouped_data_by_update_date(news_collection):
     try:
         grouped_data = news_collection.aggregate(pipeline)
         for data in grouped_data:
-            print(f"Update Date: {data['_id']}")
+            logging.info(f"Update Date: {data['_id']}")
             for article in data['articles']:
-                print(f"URL: {article['url']}, Header: {article['header']}")
+                logging.info(f"URL: {article['url']}, Header: {article['header']}")
     except Exception as e:
         print(f"Error in grouping data: {e}")
 
 
 def main():
+    # Setting up MongoDB connection
     client = MongoClient("mongodb://localhost:27017")
     db = client["orkun_tuna"]
     news_collection = db["news"]
     word_frequency_collection = db["word_frequency"]
-
+    # Configuring logging
+    logging.basicConfig(filename='data_analysis.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    # Getting stopwords
     turkish_stopwords = stopwords.words('turkish')
     extra_stopwords = get_extra_stopwords('stopwords.txt')
+    # Retrieving news articles
     news_articles = get_news_articles(news_collection)
-
+    # Processing words and counting frequencies
     words = filter_words(news_articles, turkish_stopwords, extra_stopwords)
     word_counts = Counter(words)
     most_common_words = word_counts.most_common(10)
-    print(most_common_words)
-
+    # Inserting data into DB and plotting
     insert_db(word_frequency_collection, most_common_words)
     plot_word_frequency(most_common_words)
 
